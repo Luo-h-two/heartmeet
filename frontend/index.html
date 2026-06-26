@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>心遇 - 遇见心动的TA</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>💕</text></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- ========== PC端顶部导航 ========== -->
+    <header class="pc-header" id="pcHeader">
+      <div class="pc-header-inner">
+        <a href="#" class="pc-logo" onclick="navigateTo('home')">💕 心遇</a>
+        <nav class="pc-nav" id="pcNav">
+          <a href="#" data-page="home" onclick="navigateTo('home')">首页推荐</a>
+          <a href="#" data-page="discover" onclick="navigateTo('discover')">发现用户</a>
+          <a href="#" data-page="chatlist" onclick="navigateTo('chatlist')">我的消息<span class="badge-dot" id="chatBadge" style="display:none"></span></a>
+          <a href="#" data-page="aichat" onclick="navigateTo('aichat')">🤖 AI助手</a>
+          <a href="#" data-page="profile" onclick="navigateTo('profile')">个人中心</a>
+          <a href="#" data-page="analysis" onclick="navigateTo('analysis')">行为分析</a>
+        </nav>
+        <div class="pc-nav-right" id="pcNavRight"></div>
+      </div>
+    </header>
+
+    <!-- ========== 移动端顶部导航 ========== -->
+    <nav class="mobile-navbar" id="mobileNavbar">
+      <div class="mobile-nav-content">
+        <a href="#" class="mobile-brand" onclick="navigateTo('home')">
+          <span class="brand-icon">💕</span>
+          <span class="brand-text">心遇</span>
+        </a>
+        <div class="mobile-nav-actions" id="mobileNavActions"></div>
+      </div>
+    </nav>
+
+    <!-- ========== 页面容器 ========== -->
+    <main id="pageContainer"></main>
+
+    <!-- ========== 移动端底部导航 ========== -->
+    <nav class="mobile-bottom-nav" id="mobileBottomNav">
+      <a href="#" class="bottom-nav-item active" data-page="home" onclick="navigateTo('home')">
+        <span class="nav-icon">🏠</span><span class="nav-label">推荐</span>
+      </a>
+      <a href="#" class="bottom-nav-item" data-page="discover" onclick="navigateTo('discover')">
+        <span class="nav-icon">🔍</span><span class="nav-label">发现</span>
+      </a>
+      <a href="#" class="bottom-nav-item" data-page="chatlist" onclick="navigateTo('chatlist')">
+        <span class="nav-icon">💬</span><span class="nav-label">消息</span>
+      </a>
+      <a href="#" class="bottom-nav-item" data-page="aichat" onclick="navigateTo('aichat')">
+        <span class="nav-icon">🤖</span><span class="nav-label">AI助手</span>
+      </a>
+      <a href="#" class="bottom-nav-item" data-page="profile" onclick="navigateTo('profile')">
+        <span class="nav-icon">👤</span><span class="nav-label">我的</span>
+      </a>
+    </nav>
+
+    <!-- ========== Toast 提示 ========== -->
+    <div class="toast-container" id="toastContainer"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
