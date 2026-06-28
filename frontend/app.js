@@ -385,7 +385,9 @@ registerPage('home', () => {
         </div>
       </div>
       <div class="pc-recommend-grid" id="pcRecommendGrid"><div class="loading-spinner"></div></div>
+      <div id="pcRecommendFooter"></div>
     `;
+        pcHomePage = 1;
         loadPCRecommendations();
     } else {
         container.innerHTML = `
@@ -408,22 +410,35 @@ function quickFilter(el) {
     document.querySelectorAll('#pcQuickFilter .filter-chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     currentQuickGender = el.dataset.gender;
+    pcHomePage = 1;  // 重置页码
     loadPCRecommendations();
 }
 
+// PC首页分页状态
+let pcHomePage = 1;
+let pcHomeTotal = 0;
+const PC_HOME_PAGE_SIZE = 20;
+
 // ========== PC端推荐 ==========
-async function loadPCRecommendations() {
+async function loadPCRecommendations(page) {
+    if (page !== undefined) pcHomePage = page;
     const grid = document.getElementById('pcRecommendGrid');
     if (!grid) return;
-    let url = '/recommend?page=1&page_size=20';
+    let url = `/recommend?page=${pcHomePage}&page_size=${PC_HOME_PAGE_SIZE}`;
     if (currentQuickGender) url += `&gender=${currentQuickGender}`;
 
     try {
+        grid.innerHTML = '<div class="loading-spinner"></div>';
         const res = await api(url);
+        pcHomeTotal = res.total;
+
         if (!res.users.length) {
             grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">暂无推荐用户</div></div>';
+            document.getElementById('pcRecommendFooter').innerHTML = '';
             return;
         }
+
+        // 页码式：始终替换全部内容
         grid.innerHTML = res.users.map(u => `
       <div class="pc-user-card" onclick="viewUserDetail(${u.id})">
         <div class="pc-user-card-img">
@@ -447,9 +462,52 @@ async function loadPCRecommendations() {
         </div>
       </div>
     `).join('');
+
+        renderPCHomeFooter();
     } catch (err) {
         grid.innerHTML = `<div class="empty-state"><div class="empty-icon">😢</div><div class="empty-title">加载失败</div><div class="empty-desc">${err.message}</div></div>`;
+        document.getElementById('pcRecommendFooter').innerHTML = '';
     }
+}
+
+function renderPCHomeFooter() {
+    const container = document.getElementById('pcRecommendFooter');
+    if (!container) return;
+    const totalPages = Math.ceil(pcHomeTotal / PC_HOME_PAGE_SIZE);
+    if (totalPages <= 1) {
+        container.innerHTML = `<div class="pagination-footer"><span class="pagination-info">共 ${pcHomeTotal} 位用户</span></div>`;
+        return;
+    }
+
+    let pagesHtml = '';
+    const maxShow = 5;
+    let startPage = Math.max(1, pcHomePage - Math.floor(maxShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxShow - 1);
+    if (endPage - startPage < maxShow - 1) startPage = Math.max(1, endPage - maxShow + 1);
+
+    for (let i = startPage; i <= endPage; i++) {
+        const active = i === pcHomePage ? 'active' : '';
+        pagesHtml += `<button class="pagination-btn ${active}" onclick="goPCHomePage(${i})">${i}</button>`;
+    }
+
+    container.innerHTML = `
+    <div class="pagination-footer">
+      <span class="pagination-info">共 ${pcHomeTotal} 位用户</span>
+      <div class="pagination-controls">
+        <button class="pagination-btn" ${pcHomePage <= 1 ? 'disabled' : ''} onclick="goPCHomePage(${pcHomePage - 1})">◀ 上一页</button>
+        ${pagesHtml}
+        <button class="pagination-btn" ${pcHomePage >= totalPages ? 'disabled' : ''} onclick="goPCHomePage(${pcHomePage + 1})">下一页 ▶</button>
+      </div>
+      <span class="pagination-info">第 ${pcHomePage}/${totalPages} 页</span>
+    </div>`;
+}
+
+function goPCHomePage(page) {
+    const totalPages = Math.ceil(pcHomeTotal / PC_HOME_PAGE_SIZE);
+    if (page < 1 || page > totalPages) return;
+    pcHomePage = page;
+    document.getElementById('pageContainer').scrollIntoView({ behavior: 'smooth' });
+    loadPCRecommendations(page);
 }
 
 // ========== 移动端推荐（探探风格） ==========
@@ -672,19 +730,25 @@ registerPage('discover', () => {
       <span class="filter-chip" data-value="female" onclick="applyGenderFilter(this)">女生</span>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <select class="form-select" id="filterCity" onchange="applyFilters()" style="flex:1;min-width:100px;">
+      <select class="form-select" id="filterCity" onchange="discoverPage=1;applyFilters()" style="flex:1;min-width:100px;">
         <option value="">全部城市</option>
         <option>北京</option><option>上海</option><option>广州</option><option>深圳</option>
         <option>杭州</option><option>成都</option><option>重庆</option><option>西安</option>
         <option>武汉</option><option>南京</option>
       </select>
-      <input type="number" class="form-input" id="filterMinAge" placeholder="最小年龄" min="18" max="60" style="flex:1;min-width:80px;" onchange="applyFilters()" />
-      <input type="number" class="form-input" id="filterMaxAge" placeholder="最大年龄" min="18" max="60" style="flex:1;min-width:80px;" onchange="applyFilters()" />
+      <input type="number" class="form-input" id="filterMinAge" placeholder="最小年龄" min="18" max="60" style="flex:1;min-width:80px;" onchange="discoverPage=1;applyFilters()" />
+      <input type="number" class="form-input" id="filterMaxAge" placeholder="最大年龄" min="18" max="60" style="flex:1;min-width:80px;" onchange="discoverPage=1;applyFilters()" />
     </div>
     <div class="filter-bar" id="tagFilter"></div>
+    <div id="discoverPaginationTop"></div>
     <div class="pc-discover-grid" id="pcDiscoverGrid"><div class="loading-spinner"></div></div>
     <div class="user-grid" id="mobileDiscoverGrid"><div class="loading-spinner"></div></div>
+    <div id="discoverPagination"></div>
   `;
+
+    // 重置分页
+    discoverPage = 1;
+    discoverTotal = 0;
 
     api('/tags').then(data => {
         const tagBar = document.getElementById('tagFilter');
@@ -700,20 +764,28 @@ registerPage('discover', () => {
 let currentGender = '';
 let selectedTags = [];
 
+// 发现页分页状态
+let discoverPage = 1;
+let discoverTotal = 0;
+let discoverPageSize = 24;
+
 function applyGenderFilter(el) {
     document.querySelectorAll('#genderFilter .filter-chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     currentGender = el.dataset.value;
+    discoverPage = 1;  // 重置页码
     applyFilters();
 }
 
 function toggleTagFilter(el) {
     el.classList.toggle('active');
     selectedTags = Array.from(document.querySelectorAll('#tagFilter .filter-chip.active')).map(c => c.dataset.value);
+    discoverPage = 1;  // 重置页码
     applyFilters();
 }
 
-async function applyFilters() {
+async function applyFilters(page) {
+    page = page || discoverPage;
     const city = document.getElementById('filterCity')?.value || '';
     const minAge = document.getElementById('filterMinAge')?.value || '';
     const maxAge = document.getElementById('filterMaxAge')?.value || '';
@@ -723,19 +795,28 @@ async function applyFilters() {
     if (minAge) params.set('min_age', minAge);
     if (maxAge) params.set('max_age', maxAge);
     if (selectedTags.length) params.set('tags', selectedTags.join(','));
-    params.set('page_size', '24');
+    params.set('page', page);
+    params.set('page_size', discoverPageSize);
 
     try {
         const res = await api(`/recommend?${params.toString()}`);
+        discoverPage = res.page;
+        discoverTotal = res.total;
+        discoverPageSize = res.page_size;
+
         if (isPC()) {
             renderPCDiscoverGrid(res.users);
         } else {
             renderMobileDiscoverGrid(res.users);
         }
+        renderDiscoverPagination();
     } catch (err) {
         const errHtml = `<div class="empty-state"><div class="empty-desc">${err.message}</div></div>`;
-        document.getElementById('pcDiscoverGrid').innerHTML = errHtml;
-        document.getElementById('mobileDiscoverGrid').innerHTML = errHtml;
+        const pcEl = document.getElementById('pcDiscoverGrid');
+        const mobileEl = document.getElementById('mobileDiscoverGrid');
+        if (pcEl) pcEl.innerHTML = errHtml;
+        if (mobileEl) mobileEl.innerHTML = errHtml;
+        document.getElementById('discoverPagination').innerHTML = '';
     }
 }
 
@@ -779,6 +860,49 @@ function renderMobileDiscoverGrid(users) {
       </div>
     </div>
   `).join('')}</div>`;
+}
+
+// ==================== 发现页分页 ====================
+function renderDiscoverPagination() {
+    const el = document.getElementById('discoverPagination');
+    if (!el) return;
+    const totalPages = Math.ceil(discoverTotal / discoverPageSize);
+    if (totalPages <= 1) {
+        el.innerHTML = discoverTotal > 0
+            ? `<div class="pagination-footer"><span class="pagination-info">共 ${discoverTotal} 位用户</span></div>`
+            : '';
+        return;
+    }
+
+    let pagesHtml = '';
+    const maxShow = 5;
+    let startPage = Math.max(1, discoverPage - Math.floor(maxShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxShow - 1);
+    if (endPage - startPage < maxShow - 1) startPage = Math.max(1, endPage - maxShow + 1);
+
+    for (let i = startPage; i <= endPage; i++) {
+        const active = i === discoverPage ? 'active' : '';
+        pagesHtml += `<button class="pagination-btn ${active}" onclick="goDiscoverPage(${i})">${i}</button>`;
+    }
+
+    el.innerHTML = `
+    <div class="pagination-footer">
+      <span class="pagination-info">共 ${discoverTotal} 位用户</span>
+      <div class="pagination-controls">
+        <button class="pagination-btn" ${discoverPage <= 1 ? 'disabled' : ''} onclick="goDiscoverPage(${discoverPage - 1})">◀ 上一页</button>
+        ${pagesHtml}
+        <button class="pagination-btn" ${discoverPage >= totalPages ? 'disabled' : ''} onclick="goDiscoverPage(${discoverPage + 1})">下一页 ▶</button>
+      </div>
+      <span class="pagination-info">第 ${discoverPage}/${totalPages} 页</span>
+    </div>`;
+}
+
+function goDiscoverPage(page) {
+    if (page < 1 || page > Math.ceil(discoverTotal / discoverPageSize)) return;
+    discoverPage = page;
+    // 滚动到顶部
+    document.getElementById('pageContainer').scrollIntoView({ behavior: 'smooth' });
+    applyFilters(page);
 }
 
 // ==================== 页面：消息列表 ====================

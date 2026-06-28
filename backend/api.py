@@ -571,3 +571,31 @@ async def get_all_tags():
         "personality": ["开朗", "幽默", "细心", "文艺", "温柔", "独立", "阳光", "自律", "活泼",
                         "可爱", "成熟", "知性", "浪漫", "随和", "安静", "热血", "宅", "外向", "内向"],
     }
+
+
+# ==================== 平台统计 ====================
+
+@router.get("/stats")
+async def get_platform_stats(db: AsyncSession = Depends(get_db)):
+    """获取平台统计数据（总数、男女比例等）"""
+    total = await db.scalar(select(func.count(User.id)).where(User.is_active == True))
+    male = await db.scalar(select(func.count(User.id)).where(User.gender == "male", User.is_active == True))
+    female = await db.scalar(select(func.count(User.id)).where(User.gender == "female", User.is_active == True))
+
+    # 获取城市分布 top10
+    from sqlalchemy import text
+    city_result = await db.execute(
+        select(User.city, func.count(User.id).label("cnt"))
+        .where(User.city != "", User.is_active == True)
+        .group_by(User.city)
+        .order_by(desc(func.count(User.id)))
+        .limit(10)
+    )
+    cities = [{"name": row.city, "count": row.cnt} for row in city_result.all()]
+
+    return {
+        "total": total or 0,
+        "male": male or 0,
+        "female": female or 0,
+        "cities": cities,
+    }
