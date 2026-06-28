@@ -165,6 +165,57 @@ function renderAvatar(avatar, gender) {
     return `<span class="avatar-emoji">${emoji}</span>`;
 }
 
+// ==================== 用户主页相册展示 ====================
+function renderUserPhotos(userId, photos) {
+    if (!photos || !photos.length) return '';
+    const valid = photos.map(p => fixUploadUrl(p)).filter(Boolean);
+    if (!valid.length) return '';
+    const count = valid.length;
+
+    let html = `<div class="profile-section">
+        <div class="profile-section-title">🖼️ 相册 (${count}张)</div>
+        <div class="user-photo-gallery">`;
+
+    if (count === 1) {
+        html += `<div class="gallery-single" onclick="navigateTo('userphotos',{userId:${userId}})">
+            <img src="${valid[0]}" alt="照片" loading="lazy" onerror="this.style.display='none'" />
+        </div>`;
+    } else if (count === 2) {
+        html += `<div class="gallery-double">
+            ${valid.map((p, i) => `<div class="gallery-double-item" onclick="navigateTo('userphotos',{userId:${userId}})"><img src="${p}" alt="照片${i+1}" loading="lazy" onerror="this.style.display='none'" /></div>`).join('')}
+        </div>`;
+    } else {
+        html += `<div class="gallery-featured">
+            <div class="gallery-main" onclick="navigateTo('userphotos',{userId:${userId}})">
+                <img src="${valid[0]}" alt="照片1" loading="lazy" onerror="this.style.display='none'" />
+            </div>
+            <div class="gallery-side">`;
+        valid.slice(1, 3).forEach((p, i) => {
+            const isLast = i === 1;
+            const hasMore = count > 3 && isLast;
+            html += `<div class="gallery-side-item${hasMore ? ' gallery-more' : ''}" onclick="navigateTo('userphotos',{userId:${userId}})">
+                <img src="${p}" alt="照片${i+2}" loading="lazy" onerror="this.style.display='none'" />
+                ${hasMore ? '<span class="gallery-more-label">+' + (count - 3) + '</span>' : ''}
+            </div>`;
+        });
+        html += `</div></div>`;
+
+        if (count > 3) {
+            html += `<div class="photo-grid gallery-rest" id="galleryRest_${userId}" style="display:none;margin-top:8px;">`;
+            valid.slice(3).forEach(p => {
+                html += `<div class="photo-item" onclick="navigateTo('userphotos',{userId:${userId}})">
+                    <img src="${p}" alt="照片" loading="lazy" onerror="this.style.display='none';this.parentElement.style.display='none'" />
+                </div>`;
+            });
+            html += `</div>`;
+            html += `<button class="gallery-toggle-btn" onclick="var r=document.getElementById('galleryRest_${userId}');var d=r.style.display==='none'?'grid':'none';r.style.display=d;this.textContent=d==='none'?'查看全部 ${count} 张照片 ▼':'收起 ▲'">查看全部 ${count} 张照片 ▼</button>`;
+        }
+    }
+
+    html += `</div></div>`;
+    return html;
+}
+
 // ==================== 时间格式化 ====================
 function formatTime(isoStr) {
     if (!isoStr) return '';
@@ -1059,20 +1110,7 @@ registerPage('userpage', (data) => {
     container.innerHTML = `<div class="loading-spinner"></div>`;
 
     api(`/users/${userId}`).then(u => {
-        const photos = u.photos || [];
-        const photosHtml = photos.length ? `
-      <div class="profile-section">
-        <div class="profile-section-title">🖼️ 相册 (${photos.length})</div>
-        <div class="photo-grid">
-          ${photos.map(p => {
-            const imgUrl = fixUploadUrl(p);
-            return `<div class="photo-item" onclick="event.stopPropagation();previewPhoto('${imgUrl}')">
-            <img src="${imgUrl}" alt="照片" loading="lazy" onerror="this.style.display='none';this.parentElement.style.display='none'" />
-          </div>`;
-          }).join('')}
-        </div>
-      </div>
-    ` : '';
+        const photosHtml = renderUserPhotos(u.id, u.photos || []);
 
         container.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
@@ -1081,7 +1119,7 @@ registerPage('userpage', (data) => {
       </div>
       <div class="card">
         <div style="text-align:center;padding:20px 0;">
-          <div style="font-size:80px;">${renderAvatar(u.avatar, u.gender)}</div>
+          <div class="userpage-avatar">${renderAvatar(u.avatar, u.gender)}</div>
           <h2 style="font-size:22px;margin:8px 0;">${u.nickname}, ${u.age}岁</h2>
           <p style="color:var(--text-secondary);">📍 ${u.city || '保密'} · ${u.occupation || '保密'}</p>
         </div>
@@ -1109,6 +1147,34 @@ registerPage('userpage', (data) => {
         </div>
       </div>
     `;
+    }).catch(err => {
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">😢</div><div class="empty-title">加载失败</div><div class="empty-desc">${err.message}</div></div>`;
+    });
+});
+
+// ==================== 页面：查看某用户全部照片 ====================
+registerPage('userphotos', (data) => {
+    if (!Store.isLoggedIn()) { navigateTo('login'); return; }
+    const userId = data?.userId;
+    if (!userId) { navigateTo('home'); return; }
+
+    const container = document.getElementById('pageContainer');
+    container.innerHTML = `<div class="loading-spinner"></div>`;
+
+    api(`/users/${userId}`).then(u => {
+        const valid = (u.photos || []).map(p => fixUploadUrl(p)).filter(Boolean);
+        const grid = valid.length ? valid.map(p => `<div class="photo-item" onclick="previewPhoto('${p}')">
+            <img src="${p}" alt="照片" loading="lazy" onerror="this.style.display='none';this.parentElement.style.display='none'" />
+        </div>`).join('') : '<div class="empty-state"><div class="empty-icon">📷</div><div class="empty-title">暂无照片</div></div>';
+
+        container.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+            <button onclick="navigateTo('userpage',{userId:${userId}})" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text);">←</button>
+            <h2 style="font-size:20px;font-weight:700;">${u.nickname} 的全部照片 (${valid.length})</h2>
+        </div>
+        <div class="photo-grid">
+            ${grid}
+        </div>`;
     }).catch(err => {
         container.innerHTML = `<div class="empty-state"><div class="empty-icon">😢</div><div class="empty-title">加载失败</div><div class="empty-desc">${err.message}</div></div>`;
     });

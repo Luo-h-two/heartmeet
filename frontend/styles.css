@@ -1233,6 +1233,142 @@ img { max-width: 100%; }
   background: rgba(255,71,87,0.05);
 }
 
+/* ========== 查看别人主页 - 大头像 ========== */
+.userpage-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.userpage-avatar .avatar-img {
+  width: 400px;
+  height: auto;
+  max-width: 100%;
+  border-radius: var(--radius);
+  object-fit: cover;
+}
+.userpage-avatar .avatar-emoji {
+  font-size: 80px;
+}
+
+/* ========== 用户主页相册级联展示 ========== */
+.user-photo-gallery {
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+.gallery-single {
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+}
+.gallery-single img {
+  width: 250px;
+  height: 250px;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--radius);
+}
+
+.gallery-double {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.gallery-double-item {
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 4/3;
+}
+.gallery-double-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gallery-featured {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 4px;
+}
+.gallery-main {
+  border-radius: var(--radius) 0 0 var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 4/3;
+  min-height: 200px;
+}
+.gallery-main img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.gallery-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.gallery-side-item {
+  flex: 1;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+.gallery-side-item:first-child {
+  border-radius: 0 var(--radius) 0 0;
+}
+.gallery-side-item:last-child {
+  border-radius: 0 0 var(--radius) 0;
+}
+.gallery-side-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.gallery-more::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  pointer-events: none;
+}
+.gallery-more-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 2;
+}
+.gallery-rest {
+  animation: fadeIn 0.3s;
+}
+.gallery-toggle-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.gallery-toggle-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(255,71,87,0.05);
+}
+
 
 /* ========== 分页页脚 ========== */
 .pagination-footer {
