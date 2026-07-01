@@ -26,6 +26,9 @@ class User(Base):
     latitude = Column(Float, default=0.0)
     longitude = Column(Float, default=0.0)
     is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)  # 是否管理员（兼容旧字段）
+    role = Column(String(20), default="user")  # user/moderator/admin/superadmin
+    status = Column(String(20), default="active")  # active/banned
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -74,3 +77,18 @@ class ChatMessage(Base):
     content = Column(Text, default="")
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AdminLog(Base):
+    """管理员操作日志表"""
+    __tablename__ = "admin_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    action = Column(String(50), nullable=False)  # login/user_edit/user_ban/user_delete/view_logs
+    target_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 操作目标用户ID
+    detail = Column(Text, default="")  # 操作详情(JSON格式)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    admin = relationship("User", foreign_keys=[admin_id])
+    target = relationship("User", foreign_keys=[target_id])

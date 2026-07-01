@@ -1,5 +1,6 @@
 """批量创建100个女性模拟用户，每人绑定一张真实照片"""
 import json
+import os
 import random
 import asyncio
 from sqlalchemy import select
@@ -128,8 +129,11 @@ def random_user_data(phone: str, idx: int):
 
 
 async def run():
-    # 读取图片
+    # 读取图片（云端/新环境可能没有此文件，直接跳过）
     img_path = r"c:\Users\鸿\CodeBuddy\20260628140336\img\beauty_images.json"
+    if not os.path.exists(img_path):
+        print(f"[SKIP] 头像资源不存在: {img_path}")
+        return
     with open(img_path, "r", encoding="utf-8") as f:
         images = json.load(f)
 

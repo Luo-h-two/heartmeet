@@ -185,3 +185,109 @@ class AIChatRequest(BaseModel):
             raise ValueError("对话不能为空")
         # 限制最近 20 轮对话，避免 token 过长
         return v[-20:]
+
+
+# ============ 管理后台 ============
+
+class AdminLogin(BaseModel):
+    phone: str
+    password: str
+
+
+class AdminUserUpdate(BaseModel):
+    nickname: Optional[str] = None
+    gender: Optional[str] = None
+    city: Optional[str] = None
+    occupation: Optional[str] = None
+    bio: Optional[str] = None
+    interests: Optional[List[str]] = None
+    personality_tags: Optional[List[str]] = None
+    is_admin: Optional[bool] = None
+    role: Optional[str] = None
+
+
+class AdminBanRequest(BaseModel):
+    reason: Optional[str] = ""
+
+
+class AdminUserResponse(BaseModel):
+    id: int
+    phone: str
+    nickname: str
+    avatar: Optional[str] = ""
+    photos: Optional[List[str]] = []
+    age: int = 18
+    gender: str = "other"
+    city: str = ""
+    occupation: str = ""
+    bio: str = ""
+    interests: List[str] = []
+    personality_tags: List[str] = []
+    is_admin: bool = False
+    role: str = "user"
+    status: str = "active"
+    is_active: bool = True
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class AdminUserListResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    users: List[AdminUserResponse]
+
+
+class AdminDashboardResponse(BaseModel):
+    total_users: int
+    today_new: int
+    gender_ratio: dict
+    banned_count: int
+    top_cities: List[dict]
+    active_7d: int
+    interactions_7d: int
+
+
+class AdminLogResponse(BaseModel):
+    id: int
+    admin_id: int
+    action: str
+    target_id: Optional[int] = None
+    detail: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AdminActionResponse(BaseModel):
+    id: int
+    user_id: int
+    target_user_id: int
+    action_type: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AdminChatResponse(BaseModel):
+    id: int
+    from_user_id: int
+    to_user_id: int
+    content: str
+    is_read: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AdminAdminLogResponse(BaseModel):
+    id: int
+    admin_id: int
+    action: str
+    target_id: Optional[int] = None
+    detail: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

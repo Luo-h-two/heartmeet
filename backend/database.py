@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import text
 from config import DATABASE_URL
 
 engine = create_async_engine(DATABASE_URL, echo=False)
@@ -21,3 +22,8 @@ async def get_db():
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        result = await conn.execute(text("PRAGMA table_info(users)"))
+        columns = [col[1] for col in result.all()]
+        if "role" not in columns:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user'"))
+            print("[OK] Added role column to users table")

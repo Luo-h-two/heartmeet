@@ -9,7 +9,8 @@ from fastapi.responses import FileResponse, Response
 from database import init_db, async_session
 from seed_data import seed_database
 from api import router
-from config import UPLOAD_DIR
+from admin_api import admin_router
+from config import UPLOAD_DIR, ALLOWED_ORIGINS
 
 # 前端静态文件目录
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
@@ -37,7 +38,7 @@ app = FastAPI(
 # CORS 配置
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,6 +50,7 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # API 路由
 app.include_router(router)
+app.include_router(admin_router)
 
 
 @app.get("/")

@@ -15,7 +15,7 @@ from schemas import (
     ActionCreate, BehaviorLogCreate, RecommendResponse, AnalysisResponse, MatchResponse,
     SendMessageRequest, AIChatRequest,
 )
-from auth import hash_password, verify_password, create_access_token, get_current_user
+from auth import hash_password, verify_password, is_old_hash, create_access_token, get_current_user
 from recommender import get_recommend_users, analyze_user_behavior
 from config import UPLOAD_DIR, MAX_UPLOAD_SIZE
 
@@ -53,6 +53,10 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
     user = result.scalar_one_or_none()
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="手机号或密码错误")
+
+    if is_old_hash(user.password_hash):
+        user.password_hash = hash_password(data.password)
+        await db.commit()
 
     token = create_access_token({"sub": str(user.id)})
     return TokenResponse(access_token=token, user=UserResponse.model_validate(user))

@@ -7,6 +7,7 @@ from models import User, UserAction, BehaviorLog
 from auth import hash_password
 
 MOCK_USERS = [
+    {"phone": "13800000001", "password": "Admin@123", "nickname": "系统管理员", "age": 30, "gender": "male", "city": "深圳", "occupation": "系统管理员", "bio": "平台管理员账号", "interests": ["编程", "阅读"], "personality_tags": ["成熟", "自律"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=admin01", "is_admin": True},
     {"phone": "13800138001", "password": "Pass@123", "nickname": "阳光小明", "age": 26, "gender": "male", "city": "北京", "occupation": "产品经理", "bio": "热爱生活，喜欢旅行和摄影。周末喜欢探索城市角落，希望能遇到志同道合的你。", "interests": ["旅行", "摄影", "美食", "电影"], "personality_tags": ["开朗", "幽默", "细心"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=male01"},
     {"phone": "13800138002", "password": "Pass@123", "nickname": "文艺小鹿", "age": 24, "gender": "female", "city": "北京", "occupation": "设计师", "bio": "一只热爱插画和手作的设计师。喜欢逛美术馆，也喜欢在家做手工。", "interests": ["绘画", "手作", "看展", "咖啡"], "personality_tags": ["文艺", "温柔", "独立"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=female01"},
     {"phone": "13800138003", "password": "Pass@123", "nickname": "运动达人", "age": 28, "gender": "male", "city": "上海", "occupation": "健身教练", "bio": "每天不是在健身房就是在去健身房的路上。也喜欢户外徒步和攀岩。", "interests": ["健身", "跑步", "攀岩", "篮球"], "personality_tags": ["阳光", "自律", "开朗"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=male02"},
@@ -51,6 +52,7 @@ async def seed_database(db: AsyncSession):
             interests=u["interests"],
             personality_tags=u["personality_tags"],
             avatar=u["avatar"],
+            is_admin=u.get("is_admin", False),
             preference={"min_age": 20, "max_age": 35, "gender": "", "cities": [], "tags": []},
         )
         db.add(user)

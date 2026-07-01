@@ -1,0 +1,124 @@
+================================================================================
+                    心遇 HeartMeet 管理后台 - 升级日志
+================================================================================
+
+升级时间: 2026-07-01
+升级版本: v2.0.0
+升级内容: 安全增强 + 功能扩展 + 代码重构
+
+================================================================================
+一、安全增强 (P0 - 必须完成)
+================================================================================
+
+1. 密码哈希算法升级 (SHA-256 → bcrypt)
+   - 文件: backend/auth.py
+   - 改动: 
+     * 新增 bcrypt 密码哈希函数
+     * 支持 SHA-256 与 bcrypt 双验兼容
+     * 登录成功后自动将旧密码重哈希为 bcrypt
+   - 依赖: bcrypt==4.2.0
+   - 兼容性: 旧密码仍可正常登录，无需数据迁移
+
+2. 接口限流 (Rate Limiting)
+   - 文件: backend/main.py, backend/api.py, backend/admin_api.py
+   - 改动:
+     * 全局限流: 100次/分钟
+     * 登录接口限流: 5次/分钟 (防止暴力破解)
+   - 依赖: slowapi==0.1.9, limits==3.15.0
+
+3. 收紧 CORS 配置
+   - 文件: backend/config.py, backend/main.py
+   - 改动:
+     * 通过环境变量 ALLOWED_ORIGINS 控制允许的来源
+     * 开发环境默认允许所有 (*)
+     * 生产环境建议设置具体域名，如: ALLOWED_ORIGINS=https://yourdomain.com
+   - 使用: 启动时设置环境变量或在 .env 文件中配置
+
+================================================================================
+二、功能扩展 (P1 - 重要建议)
+================================================================================
+
+4. 角色管理系统
+   - 文件: backend/models.py, backend/auth.py, backend/admin_api.py, 
+           backend/schemas.py, frontend/admin.js, frontend/admin.css
+   - 改动:
+     * 新增 role 字段: user / moderator / admin / superadmin
+     * 角色权限分级: 用户(0) < 审核员(1) < 管理员(2) < 超级管理员(3)
+     * 兼容旧 is_admin 字段
+     * 前端支持角色查看和编辑
+   - 角色权限:
+     * user: 普通用户，无后台权限
+     * moderator: 审核员，可查看用户列表、日志
+     * admin: 管理员，可编辑、封禁用户
+     * superadmin: 超级管理员，所有权限
+
+================================================================================
+三、代码重构 (P2 - 可选优化)
+================================================================================
+
+5. 前端模块化拆分
+   - 文件: frontend/admin.js → frontend/admin-modules/
+   - 新文件结构:
+     * admin-modules/api.js        - API 封装与 Token 管理
+     * admin-modules/utils.js      - 工具函数 (toast, show, hide, getRoleBadge)
+     * admin-modules/modal.js      - 弹窗系统
+     * admin-modules/dashboard.js  - 仪表盘模块
+     * admin-modules/users.js      - 用户管理模块
+     * admin-modules/logs.js       - 日志模块 (行为/交互/聊天/操作日志)
+   - 使用 ES Module 导入，代码结构更清晰
+
+================================================================================
+四、升级步骤
+================================================================================
+
+1. 安装新依赖:
+   cd backend
+   pip install bcrypt==4.2.0 slowapi==0.1.9 limits==3.15.0
+
+2. 更新数据库表结构 (自动迁移):
+   启动服务时会自动创建新的 role 字段，无需手动操作
+
+3. 设置环境变量 (生产环境):
+   set ALLOWED_ORIGINS=https://yourdomain.com
+   set SECRET_KEY=your-secret-key
+
+4. 验证升级:
+   - 使用旧密码登录，验证自动重哈希功能
+   - 测试登录限流 (连续5次错误后应返回429)
+   - 测试角色管理功能
+
+================================================================================
+五、修改的文件清单
+================================================================================
+
+后端:
+  - backend/auth.py          (密码哈希升级、角色权限校验)
+  - backend/api.py           (登录接口限流、自动重哈希)
+  - backend/admin_api.py     (管理员登录限流、角色检查)
+  - backend/models.py        (新增 role 字段)
+  - backend/schemas.py       (新增角色相关模型)
+  - backend/main.py          (限流配置、CORS配置)
+  - backend/config.py        (新增 ALLOWED_ORIGINS)
+  - backend/requirements.txt (新增 bcrypt, slowapi, limits)
+
+前端:
+  - frontend/admin.html      (改为 ES Module)
+  - frontend/admin.js        (主入口，模块化导入)
+  - frontend/admin.css       (新增角色标签样式)
+  - frontend/admin-modules/api.js
+  - frontend/admin-modules/utils.js
+  - frontend/admin-modules/modal.js
+  - frontend/admin-modules/dashboard.js
+  - frontend/admin-modules/users.js
+  - frontend/admin-modules/logs.js
+
+================================================================================
+六、注意事项
+================================================================================
+
+1. 密码重哈希: 用户登录时自动完成，无需手动操作
+2. 旧管理员: 原 is_admin=True 的用户角色为 user，需手动升级为 admin
+3. 前端兼容性: 需要现代浏览器支持 ES Module (Chrome 61+, Firefox 60+, Safari 10.1+)
+4. 限流测试: 测试时注意不要触发限流导致无法登录
+
+================================================================================
