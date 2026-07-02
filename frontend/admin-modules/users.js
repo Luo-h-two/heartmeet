@@ -45,11 +45,11 @@ export async function fetchUsers() {
         <td>${u.age}</td><td>${u.city || "-"}</td>
         <td>${u.status === "banned" ? '<span class="badge badge-banned">封禁</span>' : '<span class="badge badge-active">正常</span>'}</td>
         <td>${getRoleBadge(u.role || 'user')}</td>
-        <td>${u.created_at ? u.created_at.slice(0,10) : "-"}</td>
+        <td>${u.created_at ? u.created_at.slice(0, 10) : "-"}</td>
         <td>
           <button class="btn btn-xs btn-outline" onclick="window.admin.viewUser(${u.id})">查看</button>
           <button class="btn btn-xs btn-outline ml-1" onclick="window.admin.editUser(${u.id})">编辑</button>
-          <button class="btn btn-xs ${u.status==='banned'?'btn-success':'btn-danger'} ml-1" onclick="window.admin.banUser(${u.id})">${u.status==='banned'?'解封':'封禁'}</button>
+          <button class="btn btn-xs ${u.status === 'banned' ? 'btn-success' : 'btn-danger'} ml-1" onclick="window.admin.banUser(${u.id})">${u.status === 'banned' ? '解封' : '封禁'}</button>
           <button class="btn btn-xs btn-danger ml-1" onclick="window.admin.deleteUser(${u.id},'${u.nickname}')">删除</button>
         </td>
       </tr>
@@ -58,10 +58,10 @@ export async function fetchUsers() {
     const totalPages = Math.ceil(d.total / d.page_size);
     document.getElementById("userPagination").innerHTML = `
       <span>共 ${d.total} 条，第 ${d.page}/${totalPages} 页</span>
-      <button onclick="usersPage=1;window.admin.fetchUsers()" ${usersPage<=1?'disabled':''}>首页</button>
-      <button onclick="usersPage--;window.admin.fetchUsers()" ${usersPage<=1?'disabled':''}>上一页</button>
-      <button onclick="usersPage++;window.admin.fetchUsers()" ${usersPage>=totalPages?'disabled':''}>下一页</button>
-      <button onclick="usersPage=totalPages;window.admin.fetchUsers()" ${usersPage>=totalPages?'disabled':''}>末页</button>
+      <button onclick="usersPage=1;window.admin.fetchUsers()" ${usersPage <= 1 ? 'disabled' : ''}>首页</button>
+      <button onclick="usersPage--;window.admin.fetchUsers()" ${usersPage <= 1 ? 'disabled' : ''}>上一页</button>
+      <button onclick="usersPage++;window.admin.fetchUsers()" ${usersPage >= totalPages ? 'disabled' : ''}>下一页</button>
+      <button onclick="usersPage=totalPages;window.admin.fetchUsers()" ${usersPage >= totalPages ? 'disabled' : ''}>末页</button>
     `;
   } catch (e) {
     document.getElementById("userTableBody").innerHTML = `<tr><td colspan="10" style="color:var(--danger)">加载失败：${e.message}</td></tr>`;
@@ -81,7 +81,7 @@ export async function viewUser(id) {
       <p>🎭 性格：${(u.personality_tags || []).join("、") || "无"}</p>
       <p>📸 相册：${(u.photos || []).length} 张</p>
       <p>🛡️ 角色：${getRoleBadge(u.role || 'user')} | 状态：${u.status}</p>
-      <p>📅 注册：${u.created_at ? u.created_at.slice(0,10) : "-"}</p>
+      <p>📅 注册：${u.created_at ? u.created_at.slice(0, 10) : "-"}</p>
       <div class="modal-actions">
         <button class="btn btn-outline" onclick="closeModal()">关闭</button>
         <button class="btn btn-filled" onclick="closeModal();window.admin.editUser(${u.id})">编辑</button>
@@ -96,12 +96,12 @@ export async function editUser(id) {
     openModal(`
       <h3>✏️ 编辑用户 #${id}</h3>
       <div class="form-group"><label>昵称</label><input type="text" id="editNick" value="${u.nickname}" /></div>
-      <div class="form-group"><label>性别</label><select id="editGender"><option value="male" ${u.gender==='male'?'selected':''}>男</option><option value="female" ${u.gender==='female'?'selected':''}>女</option></select></div>
-      <div class="form-group"><label>城市</label><input type="text" id="editCity" value="${u.city||''}" /></div>
-      <div class="form-group"><label>职业</label><input type="text" id="editJob" value="${u.occupation||''}" /></div>
-      <div class="form-group"><label>个人介绍</label><textarea id="editBio">${u.bio||''}</textarea></div>
-      <div class="form-group"><label>兴趣标签（逗号分隔）</label><input type="text" id="editInterests" value="${(u.interests||[]).join(',')}" /></div>
-      <div class="form-group"><label>性格标签（逗号分隔）</label><input type="text" id="editPersonality" value="${(u.personality_tags||[]).join(',')}" /></div>
+      <div class="form-group"><label>性别</label><select id="editGender"><option value="male" ${u.gender === 'male' ? 'selected' : ''}>男</option><option value="female" ${u.gender === 'female' ? 'selected' : ''}>女</option></select></div>
+      <div class="form-group"><label>城市</label><input type="text" id="editCity" value="${u.city || ''}" /></div>
+      <div class="form-group"><label>职业</label><input type="text" id="editJob" value="${u.occupation || ''}" /></div>
+      <div class="form-group"><label>个人介绍</label><textarea id="editBio">${u.bio || ''}</textarea></div>
+      <div class="form-group"><label>兴趣标签（逗号分隔）</label><input type="text" id="editInterests" value="${(u.interests || []).join(',')}" /></div>
+      <div class="form-group"><label>性格标签（逗号分隔）</label><input type="text" id="editPersonality" value="${(u.personality_tags || []).join(',')}" /></div>
       <div class="form-group"><label>角色</label><select id="editRole">
         <option value="user" ${(u.role || 'user') === 'user' ? 'selected' : ''}>普通用户</option>
         <option value="moderator" ${u.role === 'moderator' ? 'selected' : ''}>审核员</option>
@@ -113,15 +113,15 @@ export async function editUser(id) {
         <button class="btn btn-filled" id="saveEditBtn">保存</button>
       </div>
     `);
-    document.getElementById("saveEditBtn").addEventListener("click", async function() {
+    document.getElementById("saveEditBtn").addEventListener("click", async function () {
       const data = {
         nickname: document.getElementById("editNick").value.trim(),
         gender: document.getElementById("editGender").value,
         city: document.getElementById("editCity").value.trim(),
         occupation: document.getElementById("editJob").value.trim(),
         bio: document.getElementById("editBio").value.trim(),
-        interests: document.getElementById("editInterests").value.split(",").map(s=>s.trim()).filter(Boolean),
-        personality_tags: document.getElementById("editPersonality").value.split(",").map(s=>s.trim()).filter(Boolean),
+        interests: document.getElementById("editInterests").value.split(",").map(s => s.trim()).filter(Boolean),
+        personality_tags: document.getElementById("editPersonality").value.split(",").map(s => s.trim()).filter(Boolean),
         role: document.getElementById("editRole").value,
       };
       try {

@@ -1,8 +1,8 @@
 import { show, hide, $ } from "./utils.js";
 
-export function closeModal() { 
-  hide("modalOverlay"); 
-  $("modalBox").innerHTML = ""; 
+export function closeModal() {
+  hide("modalOverlay");
+  $("modalBox").innerHTML = "";
 }
 
 export function openModal(content) {
@@ -11,10 +11,10 @@ export function openModal(content) {
 }
 
 export function initModal() {
-  document.addEventListener("keydown", function (e) { 
-    if (e.key === "Escape") closeModal(); 
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeModal();
   });
-  $("modalOverlay").addEventListener("click", function(e) {
+  $("modalOverlay").addEventListener("click", function (e) {
     if (e.target === this) closeModal();
   });
 }

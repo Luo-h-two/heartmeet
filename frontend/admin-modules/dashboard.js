@@ -24,11 +24,11 @@ export async function loadDashboard() {
       <div class="card">
         <h3>🏙️ 城市分布 Top10</h3>
         <table><thead><tr><th>排名</th><th>城市</th><th>人数</th></tr></thead>
-        <tbody>${d.top_cities.map((c,i) => `<tr><td>${i+1}</td><td>${c.city}</td><td>${c.count}</td></tr>`).join("")}</tbody></table>
+        <tbody>${d.top_cities.map((c, i) => `<tr><td>${i + 1}</td><td>${c.city}</td><td>${c.count}</td></tr>`).join("")}</tbody></table>
         ${d.top_cities.length === 0 ? '<p style="color:var(--text-secondary);padding:10px">暂无数据</p>' : ''}
       </div>
     `);
-  } catch (e) { 
-    setContent('<div class="card"><p style="color:var(--danger)">加载失败：' + e.message + '</p></div>'); 
+  } catch (e) {
+    setContent('<div class="card"><p style="color:var(--danger)">加载失败：' + e.message + '</p></div>');
   }
 }
