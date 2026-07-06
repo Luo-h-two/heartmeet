@@ -1,8 +1,10 @@
 import { api } from "./api.js";
 import { toast, setContent, getRoleBadge } from "./utils.js";
-import { closeModal, openModal } from "./modal.js";
+import { closeModal as _closeModal, openModal } from "./modal.js";
 
-let usersPage = 1;
+window.closeModal = _closeModal;
+window.usersPage = 1;
+window.usersTotalPages = 1;
 let usersData = {};
 
 export async function loadUsers() {
@@ -31,7 +33,7 @@ export async function fetchUsers() {
   const q = document.getElementById("userSearch")?.value || "";
   const g = document.getElementById("userGender")?.value || "";
   const s = document.getElementById("userStatus")?.value || "";
-  const params = new URLSearchParams({ page: usersPage, page_size: 20 });
+  const params = new URLSearchParams({ page: window.usersPage, page_size: 20 });
   if (q) params.set("keyword", q);
   if (g) params.set("gender", g);
   if (s) params.set("status", s);
@@ -55,22 +57,36 @@ export async function fetchUsers() {
       </tr>
     `).join("");
 
-    const totalPages = Math.ceil(d.total / d.page_size);
+    window.usersTotalPages = Math.ceil(d.total / d.page_size);
     document.getElementById("userPagination").innerHTML = `
-      <span>共 ${d.total} 条，第 ${d.page}/${totalPages} 页</span>
-      <button onclick="usersPage=1;window.admin.fetchUsers()" ${usersPage <= 1 ? 'disabled' : ''}>首页</button>
-      <button onclick="usersPage--;window.admin.fetchUsers()" ${usersPage <= 1 ? 'disabled' : ''}>上一页</button>
-      <button onclick="usersPage++;window.admin.fetchUsers()" ${usersPage >= totalPages ? 'disabled' : ''}>下一页</button>
-      <button onclick="usersPage=totalPages;window.admin.fetchUsers()" ${usersPage >= totalPages ? 'disabled' : ''}>末页</button>
+      <span>共 ${d.total} 条，第 ${d.page}/${window.usersTotalPages} 页</span>
+      <button onclick="window.usersPage=1;window.admin.fetchUsers()" ${window.usersPage <= 1 ? 'disabled' : ''}>首页</button>
+      <button onclick="window.usersPage--;window.admin.fetchUsers()" ${window.usersPage <= 1 ? 'disabled' : ''}>上一页</button>
+      <button onclick="window.usersPage++;window.admin.fetchUsers()" ${window.usersPage >= window.usersTotalPages ? 'disabled' : ''}>下一页</button>
+      <button onclick="window.usersPage=window.usersTotalPages;window.admin.fetchUsers()" ${window.usersPage >= window.usersTotalPages ? 'disabled' : ''}>末页</button>
     `;
   } catch (e) {
     document.getElementById("userTableBody").innerHTML = `<tr><td colspan="10" style="color:var(--danger)">加载失败：${e.message}</td></tr>`;
   }
 }
 
+function getVipBadge(level) {
+  const badges = {
+    "free": '<span class="badge badge-secondary">普通会员</span>',
+    "vip": '<span class="badge badge-vip">VIP会员</span>',
+    "svip": '<span class="badge badge-svip">SVIP会员</span>'
+  };
+  return badges[level] || '<span class="badge badge-secondary">未知</span>';
+}
+
 export async function viewUser(id) {
   try {
     const u = await api("/users/" + id);
+    const vipInfo = u.vip_level ? `
+      <p>💎 会员等级：${getVipBadge(u.vip_level)}</p>
+      <p>📅 会员过期：${u.vip_expire_at ? u.vip_expire_at.slice(0, 10) : "未设置"}</p>
+      <p>🔄 自动续费：${u.vip_auto_renew ? '✅ 开启' : '❌ 关闭'}</p>
+    ` : '';
     openModal(`
       <h3>👤 ${u.nickname} (ID: ${u.id})</h3>
       <p>📱 手机号：${u.phone}</p>
@@ -81,6 +97,7 @@ export async function viewUser(id) {
       <p>🎭 性格：${(u.personality_tags || []).join("、") || "无"}</p>
       <p>📸 相册：${(u.photos || []).length} 张</p>
       <p>🛡️ 角色：${getRoleBadge(u.role || 'user')} | 状态：${u.status}</p>
+      ${vipInfo}
       <p>📅 注册：${u.created_at ? u.created_at.slice(0, 10) : "-"}</p>
       <div class="modal-actions">
         <button class="btn btn-outline" onclick="closeModal()">关闭</button>

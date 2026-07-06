@@ -384,6 +384,16 @@ tr:hover {
   color: #27ae60;
 }
 
+.badge-vip {
+  background: linear-gradient(135deg, #ff6b6b, #ffa502);
+  color: #fff;
+}
+
+.badge-svip {
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  color: #fff;
+}
+
 /* ====== 弹窗 ====== */
 .modal-overlay {
   position: fixed;

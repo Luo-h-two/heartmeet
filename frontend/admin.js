@@ -4,9 +4,13 @@ import { initModal, closeModal } from "./admin-modules/modal.js";
 import { loadDashboard } from "./admin-modules/dashboard.js";
 import { loadUsers, fetchUsers, viewUser, editUser, banUser, deleteUser } from "./admin-modules/users.js";
 import { loadLogs, loadActions, loadChats, loadAdminLogs, fetchList } from "./admin-modules/logs.js";
+import { loadVip, fetchVipUsers, editVip, extendVip } from "./admin-modules/vip.js";
+
+window.closeModal = closeModal;
 
 window.admin = {
-  fetchUsers, viewUser, editUser, banUser, deleteUser, fetchList
+  fetchUsers, viewUser, editUser, banUser, deleteUser, fetchList,
+  fetchVipUsers, editVip, extendVip
 };
 
 function setContent(html) { document.getElementById("contentArea").innerHTML = html; }
@@ -39,13 +43,14 @@ document.getElementById("loginForm").addEventListener("submit", async function (
   }
 });
 
-function alogout() {
+window.alogout = function () {
   clearToken(); showLogin();
-}
+};
 
 const pages = {
   "dashboard": loadDashboard,
   "users": loadUsers,
+  "vip": loadVip,
   "logs": loadLogs,
   "actions": loadActions,
   "chats": loadChats,

@@ -421,6 +421,150 @@ async def admin_admin_logs(
     }
 
 
+# ==================== 12. 会员管理 - 会员列表 ====================
+@admin_router.get("/vip/list")
+async def admin_vip_list(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    keyword: Optional[str] = None,
+    vip_level: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+):
+    query = select(User)
+    count_query = select(func.count(User.id))
+    filters = []
+    
+    if keyword:
+        filters.append(or_(User.nickname.contains(keyword), User.phone.contains(keyword)))
+    if vip_level:
+        filters.append(User.vip_level == vip_level)
+    
+    if filters:
+        query = query.where(and_(*filters))
+        count_query = count_query.where(and_(*filters))
+    
+    total = await db.scalar(count_query)
+    result = await db.execute(query.order_by(desc(User.vip_expire_at)).offset((page - 1) * page_size).limit(page_size))
+    users = result.scalars().all()
+    
+    return {
+        "total": total or 0, "page": page, "page_size": page_size,
+        "users": [
+            {
+                "id": u.id, "phone": mask_phone(u.phone), "nickname": u.nickname,
+                "vip_level": u.vip_level, "vip_expire_at": str(u.vip_expire_at) if u.vip_expire_at else None,
+                "vip_auto_renew": u.vip_auto_renew, "created_at": str(u.created_at)
+            } for u in users
+        ]
+    }
+
+
+# ==================== 13. 会员管理 - 会员统计 ====================
+@admin_router.get("/vip/stats")
+async def admin_vip_stats(
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+):
+    now = datetime.utcnow()
+    
+    free_count = await db.scalar(select(func.count(User.id)).where(User.vip_level == "free"))
+    vip_count = await db.scalar(select(func.count(User.id)).where(User.vip_level == "vip"))
+    svip_count = await db.scalar(select(func.count(User.id)).where(User.vip_level == "svip"))
+    
+    active_vip = await db.scalar(
+        select(func.count(User.id)).where(and_(User.vip_level != "free", User.vip_expire_at > now))
+    )
+    expired_vip = await db.scalar(
+        select(func.count(User.id)).where(and_(User.vip_level != "free", User.vip_expire_at <= now))
+    )
+    
+    return {
+        "total_free": free_count or 0,
+        "total_vip": vip_count or 0,
+        "total_svip": svip_count or 0,
+        "active_vip": active_vip or 0,
+        "expired_vip": expired_vip or 0,
+        "total_users": (free_count or 0) + (vip_count or 0) + (svip_count or 0)
+    }
+
+
+# ==================== 14. 会员管理 - 升级/降级会员 ====================
+@admin_router.put("/vip/update/{user_id}")
+async def admin_vip_update(
+    user_id: int,
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    
+    vip_level = data.get("vip_level", "").lower()
+    if vip_level not in ["free", "vip", "svip"]:
+        raise HTTPException(status_code=400, detail="无效的会员等级")
+    
+    duration_days = data.get("duration_days", 30)
+    
+    user.vip_level = vip_level
+    if vip_level != "free":
+        if user.vip_expire_at and user.vip_expire_at > datetime.utcnow():
+            user.vip_expire_at = user.vip_expire_at + timedelta(days=duration_days)
+        else:
+            user.vip_expire_at = datetime.utcnow() + timedelta(days=duration_days)
+    else:
+        user.vip_expire_at = None
+    
+    user.vip_auto_renew = data.get("vip_auto_renew", False)
+    user.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(user)
+    
+    await add_admin_log(db, admin.id, "vip_update", target_id=user_id,
+                        detail=f"修改会员等级为 {vip_level}，有效期 {duration_days} 天")
+    
+    return {
+        "message": f"会员等级已更新为 {vip_level}",
+        "user_id": user_id,
+        "vip_level": user.vip_level,
+        "vip_expire_at": str(user.vip_expire_at) if user.vip_expire_at else None
+    }
+
+
+# ==================== 15. 会员管理 - 延长有效期 ====================
+@admin_router.put("/vip/extend/{user_id}")
+async def admin_vip_extend(
+    user_id: int,
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    
+    duration_days = data.get("duration_days", 30)
+    if user.vip_expire_at and user.vip_expire_at > datetime.utcnow():
+        user.vip_expire_at = user.vip_expire_at + timedelta(days=duration_days)
+    else:
+        user.vip_expire_at = datetime.utcnow() + timedelta(days=duration_days)
+    
+    user.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(user)
+    
+    await add_admin_log(db, admin.id, "vip_extend", target_id=user_id,
+                        detail=f"延长会员有效期 {duration_days} 天")
+    
+    return {
+        "message": f"会员有效期已延长 {duration_days} 天",
+        "vip_expire_at": str(user.vip_expire_at)
+    }
+
+
 # ==================== 验证当前管理员 ====================
 @admin_router.get("/me")
 async def admin_me(admin: User = Depends(get_current_admin)):

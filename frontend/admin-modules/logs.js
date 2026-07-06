@@ -21,8 +21,9 @@ const LIST_HEADERS = {
   }
 };
 
-let listPage = 1;
-let listApi = "";
+window.listPage = 1;
+window.listApi = "";
+window.listTotalPages = 1;
 
 export async function loadLogs() { await loadList("logs", "📝 行为日志", ["user_id", "action"], ["用户ID", "行为类型"]); }
 export async function loadActions() { await loadList("actions", "💝 交互记录", ["user_id", "action_type"], ["用户ID", "交互类型"]); }
@@ -30,7 +31,7 @@ export async function loadChats() { await loadList("chats", "💬 聊天监控",
 export async function loadAdminLogs() { await loadList("admin-logs", "🔒 管理员操作日志", [], []); }
 
 async function loadList(apiPath, title, filters, filterLabels) {
-  listPage = 1; listApi = apiPath;
+  window.listPage = 1; window.listApi = apiPath; window.listTotalPages = 1;
   const filterHtml = filters.length > 0 ? filters.map((f, i) => `<input type="text" id="filter_${f}" placeholder="${filterLabels[i]}" />`).join("") : "";
   setContent(`
     <h2 style="margin-bottom:20px">${title}</h2>
@@ -44,26 +45,26 @@ async function loadList(apiPath, title, filters, filterLabels) {
 }
 
 export async function fetchList() {
-  const params = new URLSearchParams({ page: listPage, page_size: 50 });
-  if (listApi === "logs") {
+  const params = new URLSearchParams({ page: window.listPage, page_size: 50 });
+  if (window.listApi === "logs") {
     const uid = document.getElementById("filter_user_id")?.value;
     const act = document.getElementById("filter_action")?.value;
     if (uid) params.set("user_id", uid);
     if (act) params.set("action", act);
-  } else if (listApi === "actions") {
+  } else if (window.listApi === "actions") {
     const uid = document.getElementById("filter_user_id")?.value;
     const at = document.getElementById("filter_action_type")?.value;
     if (uid) params.set("user_id", uid);
     if (at) params.set("action_type", at);
-  } else if (listApi === "chats") {
+  } else if (window.listApi === "chats") {
     const fuid = document.getElementById("filter_from_user_id")?.value;
     const tuid = document.getElementById("filter_to_user_id")?.value;
     if (fuid) params.set("from_user_id", fuid);
     if (tuid) params.set("to_user_id", tuid);
   }
   try {
-    const d = await api("/" + listApi + "?" + params.toString());
-    const headers = LIST_HEADERS[listApi] || {};
+    const d = await api("/" + window.listApi + "?" + params.toString());
+    const headers = LIST_HEADERS[window.listApi] || {};
     const headerHtml = Object.keys(headers).length > 0
       ? Object.values(headers).map(h => `<th>${h}</th>`).join("")
       : Object.keys(d.items[0] || {}).map(k => `<th>${k}</th>`).join("");
@@ -93,13 +94,13 @@ export async function fetchList() {
       </table></div>
       ${(d.items || []).length === 0 ? '<p style="color:var(--text-secondary);padding:10px">暂无数据</p>' : ''}
     `;
-    const totalPages = Math.max(1, Math.ceil(d.total / d.page_size));
+    window.listTotalPages = Math.max(1, Math.ceil(d.total / d.page_size));
     document.getElementById("listPagination").innerHTML = `
-      <span>共 ${d.total} 条，第 ${d.page}/${totalPages} 页</span>
-      <button onclick="listPage=1;window.admin.fetchList()" ${listPage <= 1 ? 'disabled' : ''}>首页</button>
-      <button onclick="listPage--;window.admin.fetchList()" ${listPage <= 1 ? 'disabled' : ''}>上一页</button>
-      <button onclick="listPage++;window.admin.fetchList()" ${listPage >= totalPages ? 'disabled' : ''}>下一页</button>
-      <button onclick="listPage=totalPages;window.admin.fetchList()" ${listPage >= totalPages ? 'disabled' : ''}>末页</button>
+      <span>共 ${d.total} 条，第 ${d.page}/${window.listTotalPages} 页</span>
+      <button onclick="window.listPage=1;window.admin.fetchList()" ${window.listPage <= 1 ? 'disabled' : ''}>首页</button>
+      <button onclick="window.listPage--;window.admin.fetchList()" ${window.listPage <= 1 ? 'disabled' : ''}>上一页</button>
+      <button onclick="window.listPage++;window.admin.fetchList()" ${window.listPage >= window.listTotalPages ? 'disabled' : ''}>下一页</button>
+      <button onclick="window.listPage=window.listTotalPages;window.admin.fetchList()" ${window.listPage >= window.listTotalPages ? 'disabled' : ''}>末页</button>
     `;
   } catch (e) { document.getElementById("listContent").innerHTML = `<p style="color:var(--danger)">加载失败：${e.message}</p>`; }
 }
