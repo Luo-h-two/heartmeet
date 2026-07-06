@@ -17,6 +17,7 @@ from schemas import (
 )
 from auth import hash_password, verify_password, is_old_hash, create_access_token, get_current_user
 from recommender import get_recommend_users, analyze_user_behavior
+from vip_service import get_vip_info, check_like_limit, check_ai_chat_limit, buy_vip, get_vip_packages, get_vip_privileges
 from config import UPLOAD_DIR, MAX_UPLOAD_SIZE
 
 router = APIRouter(prefix="/api", tags=["API"])
@@ -266,6 +267,50 @@ async def get_user_detail(
     return UserResponse.model_validate(user)
 
 
+@router.get("/users/{user_id}/likes")
+async def get_user_likes(
+    user_id: int,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取用户喜欢的列表（支持分页）"""
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="只能查看自己的喜欢列表")
+
+    total_result = await db.execute(
+        select(func.count(UserAction.id))
+        .where(
+            UserAction.user_id == user_id,
+            UserAction.action_type == "like",
+        )
+    )
+    total = total_result.scalar() or 0
+
+    offset = (page - 1) * page_size
+    liked_users = await db.execute(
+        select(User)
+        .join(UserAction, UserAction.target_user_id == User.id)
+        .where(
+            UserAction.user_id == user_id,
+            UserAction.action_type == "like",
+        )
+        .order_by(UserAction.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+
+    users = liked_users.scalars().all()
+    return {
+        "users": [UserCardResponse.model_validate(u) for u in users],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "has_more": total > offset + len(users),
+    }
+
+
 # ==================== 交互行为 ====================
 
 @router.post("/actions")
@@ -282,6 +327,21 @@ async def create_action(
     target = result.scalar_one_or_none()
     if not target:
         raise HTTPException(status_code=404, detail="目标用户不存在")
+
+    if data.action_type == "like":
+        can_like, message = await check_like_limit(db, current_user.id, "like")
+        if not can_like:
+            raise HTTPException(status_code=403, detail=message)
+
+        existing_like = await db.execute(
+            select(UserAction).where(
+                UserAction.user_id == current_user.id,
+                UserAction.target_user_id == data.target_user_id,
+                UserAction.action_type == "like",
+            )
+        )
+        if existing_like.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="您已经喜欢过该用户")
 
     action = UserAction(
         user_id=current_user.id,
@@ -543,8 +603,13 @@ async def get_analysis(
 async def ai_chat(
     data: AIChatRequest,
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """AI 聊天助手 - 模拟异性对话，提升情商"""
+    can_chat, message = await check_ai_chat_limit(db, current_user.id)
+    if not can_chat:
+        raise HTTPException(status_code=403, detail=message)
+
     from ai_chat import get_system_prompt, chat_with_ai
 
     system_prompt = get_system_prompt(data.gender)
@@ -552,6 +617,15 @@ async def ai_chat(
 
     try:
         result = await chat_with_ai(full_messages)
+
+        log = BehaviorLog(
+            user_id=current_user.id,
+            action="ai_chat",
+            extra={"gender": data.gender},
+        )
+        db.add(log)
+        await db.commit()
+
         return {
             "success": True,
             "reply": result["reply"],
@@ -560,6 +634,51 @@ async def ai_chat(
         }
     except ValueError as e:
         raise HTTPException(status_code=502, detail=str(e))
+
+
+# ==================== VIP 会员 ====================
+
+@router.get("/vip/info")
+async def get_vip_info_api(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取当前用户会员信息"""
+    info = await get_vip_info(db, current_user.id)
+    if not info:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    return info
+
+
+@router.get("/vip/packages")
+async def get_vip_packages_api():
+    """获取所有VIP套餐"""
+    return {"packages": get_vip_packages()}
+
+
+@router.get("/vip/privileges")
+async def get_vip_privileges_api(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取会员特权列表"""
+    vip_level = await get_vip_info(db, current_user.id)
+    level = vip_level["vip_level"] if vip_level else "free"
+    return {"privileges": get_vip_privileges(level)}
+
+
+@router.post("/vip/buy")
+async def buy_vip_api(
+    package_code: str = Query(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """购买VIP会员（模拟支付）"""
+    try:
+        result = await buy_vip(db, current_user.id, package_code)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ==================== 筛选标签 ====================

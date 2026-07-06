@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会员中心 - 心遇</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        header { text-align: center; margin-bottom: 40px; }
+        header h1 { color: #fff; font-size: 2.5rem; margin-bottom: 10px; }
+        header p { color: rgba(255,255,255,0.8); font-size: 1.1rem; }
+        
+        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; margin-bottom: 40px; }
+        
+        .card { background: #fff; border-radius: 16px; padding: 40px 30px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2); transition: transform 0.3s, box-shadow 0.3s; position: relative; }
+        .card:hover { transform: translateY(-10px); box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        
+        .card.featured { border: 3px solid #667eea; transform: scale(1.05); }
+        .card.featured .badge { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; padding: 5px 20px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
+        
+        .card h2 { font-size: 1.5rem; margin-bottom: 10px; color: #333; }
+        .card .price { font-size: 3rem; font-weight: bold; color: #667eea; margin-bottom: 5px; }
+        .card .period { color: #999; font-size: 0.9rem; margin-bottom: 30px; }
+        .card .description { color: #666; font-size: 0.9rem; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        
+        .card ul { list-style: none; margin-bottom: 30px; }
+        .card li { padding: 10px 0; color: #555; font-size: 0.95rem; }
+        .card li .check { color: #52c41a; margin-right: 8px; }
+        .card li .cross { color: #ff4d4f; margin-right: 8px; }
+        
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-outline { border: 2px solid #667eea; color: #667eea; background: #fff; }
+        .btn-outline:hover { background: #667eea; color: #fff; }
+        
+        .privileges-section { background: #fff; border-radius: 16px; padding: 40px; margin-top: 40px; }
+        .privileges-section h2 { text-align: center; color: #333; margin-bottom: 30px; font-size: 1.8rem; }
+        
+        .privileges-table { width: 100%; border-collapse: collapse; }
+        .privileges-table th, .privileges-table td { padding: 15px; text-align: center; border-bottom: 1px solid #eee; }
+        .privileges-table th { background: #f8f9fa; font-weight: 600; color: #333; }
+        .privileges-table td:first-child { text-align: left; font-weight: 500; }
+        
+        .badge-vip { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #333; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .badge-svip { background: linear-gradient(135deg, #e040fb, #7c4dff); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        
+        .current-vip { text-align: center; margin-bottom: 30px; padding: 20px; background: rgba(255,255,255,0.2); border-radius: 12px; }
+        .current-vip span { color: #fff; font-size: 1.1rem; }
+        .current-vip .vip-badge { display: inline-block; margin-left: 10px; padding: 5px 15px; border-radius: 20px; font-weight: bold; }
+        .vip-badge-free { background: rgba(255,255,255,0.3); color: #fff; }
+        .vip-badge-vip { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #333; }
+        .vip-badge-svip { background: linear-gradient(135deg, #e040fb, #7c4dff); color: #fff; }
+        
+        .toast { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 8px; color: #fff; font-weight: 500; z-index: 1000; animation: slideIn 0.3s ease; }
+        .toast.success { background: #52c41a; }
+        .toast.error { background: #ff4d4f; }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            header h1 { font-size: 1.8rem; }
+            .card.featured { transform: none; }
+            .privileges-table { font-size: 0.8rem; }
+            .privileges-table th, .privileges-table td { padding: 10px 5px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💎 会员中心</h1>
+            <p>解锁更多特权，遇见更好的缘分</p>
+        </header>
+        
+        <div class="current-vip" id="vipStatus">
+            <span>当前身份：</span>
+            <span class="vip-badge vip-badge-free" id="vipBadge">普通会员</span>
+            <span id="vipExpire"></span>
+        </div>
+        
+        <div class="pricing-grid">
+            <div class="card">
+                <h2>普通会员</h2>
+                <div class="price">¥0</div>
+                <div class="period">永久免费</div>
+                <div class="description">基础功能体验，适合初次使用</div>
+                <ul>
+                    <li><span class="check">✓</span>每日10次喜欢</li>
+                    <li><span class="check">✓</span>基础筛选功能</li>
+                    <li><span class="check">✓</span>每日5次AI聊天</li>
+                    <li><span class="cross">✗</span>超级喜欢</li>
+                    <li><span class="cross">✗</span>查看谁喜欢我</li>
+                </ul>
+                <button class="btn btn-outline" disabled>当前身份</button>
+            </div>
+            
+            <div class="card featured">
+                <div class="badge">推荐</div>
+                <h2>VIP会员</h2>
+                <div class="price">¥15</div>
+                <div class="period">/月起</div>
+                <div class="description">解锁核心特权，提升匹配效率</div>
+                <ul>
+                    <li><span class="check">✓</span>无限喜欢次数</li>
+                    <li><span class="check">✓</span>每日3次超级喜欢</li>
+                    <li><span class="check">✓</span>反悔功能</li>
+                    <li><span class="check">✓</span>高级筛选功能</li>
+                    <li><span class="check">✓</span>无限AI聊天</li>
+                    <li><span class="check">✓</span>金色VIP标识</li>
+                    <li><span class="cross">✗</span>查看谁喜欢我</li>
+                </ul>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="btn btn-primary" onclick="buyVip('vip_month')">¥15/月</button>
+                    <button class="btn btn-outline" onclick="buyVip('vip_quarter')">¥36/季</button>
+                    <button class="btn btn-outline" onclick="buyVip('vip_year')">¥96/年</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>SVIP会员</h2>
+                <div class="price">¥30</div>
+                <div class="period">/月起</div>
+                <div class="description">尊享全部特权，极致交友体验</div>
+                <ul>
+                    <li><span class="check">✓</span>无限喜欢次数</li>
+                    <li><span class="check">✓</span>每日10次超级喜欢</li>
+                    <li><span class="check">✓</span>查看谁喜欢我</li>
+                    <li><span class="check">✓</span>反悔功能</li>
+                    <li><span class="check">✓</span>高级筛选功能</li>
+                    <li><span class="check">✓</span>无限AI聊天</li>
+                    <li><span class="check">✓</span>钻石SVIP标识</li>
+                    <li><span class="check">✓</span>优先匹配展示</li>
+                    <li><span class="check">✓</span>专属客服</li>
+                </ul>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="btn btn-primary" onclick="buyVip('svip_month')">¥30/月</button>
+                    <button class="btn btn-outline" onclick="buyVip('svip_quarter')">¥78/季</button>
+                    <button class="btn btn-outline" onclick="buyVip('svip_year')">¥198/年</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="privileges-section">
+            <h2>🔑 特权对比</h2>
+            <table class="privileges-table">
+                <thead>
+                    <tr>
+                        <th>特权功能</th>
+                        <th>普通会员</th>
+                        <th>VIP会员</th>
+                        <th>SVIP会员</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>每日喜欢次数</td><td>10次/天</td><td><span class="badge-vip">无限</span></td><td><span class="badge-svip">无限</span></td></tr>
+                    <tr><td>超级喜欢</td><td>0次/天</td><td>3次/天</td><td>10次/天</td></tr>
+                    <tr><td>查看谁喜欢我</td><td>❌</td><td>❌</td><td><span class="badge-svip">✅</span></td></tr>
+                    <tr><td>反悔功能</td><td>❌</td><td><span class="badge-vip">✅</span></td><td><span class="badge-svip">✅</span></td></tr>
+                    <tr><td>高级筛选</td><td>基础</td><td><span class="badge-vip">全部</span></td><td><span class="badge-svip">全部</span></td></tr>
+                    <tr><td>同城优先推荐</td><td>❌</td><td><span class="badge-vip">✅</span></td><td><span class="badge-svip">✅</span></td></tr>
+                    <tr><td>AI情商助手</td><td>5次/天</td><td><span class="badge-vip">无限</span></td><td><span class="badge-svip">无限</span></td></tr>
+                    <tr><td>专属标识</td><td>❌</td><td><span class="badge-vip">金色</span></td><td><span class="badge-svip">钻石</span></td></tr>
+                    <tr><td>优先匹配展示</td><td>❌</td><td>❌</td><td><span class="badge-svip">✅</span></td></tr>
+                    <tr><td>专属客服</td><td>❌</td><td>❌</td><td><span class="badge-svip">✅</span></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        async function loadVipInfo() {
+            try {
+                const token = localStorage.getItem('heartmeet_token');
+                if (!token) {
+                    showToast('请先登录', 'error');
+                    setTimeout(() => window.location.href = 'index.html', 2000);
+                    return;
+                }
+                
+                const response = await fetch('/api/vip/info', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error('获取会员信息失败');
+                
+                const data = await response.json();
+                updateVipDisplay(data);
+            } catch (error) {
+                console.error('加载会员信息失败:', error);
+            }
+        }
+        
+        function updateVipDisplay(data) {
+            const badge = document.getElementById('vipBadge');
+            const expire = document.getElementById('vipExpire');
+            
+            badge.className = `vip-badge vip-badge-${data.vip_level}`;
+            
+            if (data.vip_level === 'free') {
+                badge.textContent = '普通会员';
+                expire.textContent = '';
+            } else if (data.vip_level === 'vip') {
+                badge.textContent = 'VIP会员';
+                if (data.vip_expire_at) {
+                    const date = new Date(data.vip_expire_at);
+                    expire.textContent = ` 到期时间：${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
+                }
+            } else {
+                badge.textContent = 'SVIP会员';
+                if (data.vip_expire_at) {
+                    const date = new Date(data.vip_expire_at);
+                    expire.textContent = ` 到期时间：${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
+                }
+            }
+        }
+        
+        async function buyVip(packageCode) {
+            try {
+                const token = localStorage.getItem('heartmeet_token');
+                if (!token) {
+                    showToast('请先登录', 'error');
+                    return;
+                }
+                
+                const response = await fetch(`/api/vip/buy?package_code=${packageCode}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showToast(`购买成功！已开通${data.vip_level.toUpperCase()}会员`, 'success');
+                    await loadVipInfo();
+                } else {
+                    showToast(data.detail || '购买失败', 'error');
+                }
+            } catch (error) {
+                showToast('购买失败，请重试', 'error');
+                console.error('购买会员失败:', error);
+            }
+        }
+        
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+        
+        document.addEventListener('DOMContentLoaded', loadVipInfo);
+    </script>
+</body>
+</html>

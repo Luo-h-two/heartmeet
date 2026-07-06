@@ -24,6 +24,19 @@ async def init_db():
         await conn.run_sync(Base.metadata.create_all)
         result = await conn.execute(text("PRAGMA table_info(users)"))
         columns = [col[1] for col in result.all()]
+        
         if "role" not in columns:
             await conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user'"))
             print("[OK] Added role column to users table")
+        
+        if "vip_level" not in columns:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN vip_level VARCHAR(20) DEFAULT 'free'"))
+            print("[OK] Added vip_level column to users table")
+        
+        if "vip_expire_at" not in columns:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN vip_expire_at DATETIME"))
+            print("[OK] Added vip_expire_at column to users table")
+        
+        if "vip_auto_renew" not in columns:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN vip_auto_renew BOOLEAN DEFAULT false"))
+            print("[OK] Added vip_auto_renew column to users table")

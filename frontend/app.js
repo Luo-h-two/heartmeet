@@ -155,11 +155,9 @@ function getAvatarEmoji(gender) {
 }
 
 function renderAvatar(avatar, gender) {
-    // 如果有真实头像 URL，显示图片；否则显示 emoji
     const imgUrl = fixUploadUrl(avatar);
     const emoji = getAvatarEmoji(gender);
     if (imgUrl) {
-        // 图片加载失败时回退到 emoji，而不是留空白
         return `<span class="avatar-emoji" style="display:none;">${emoji}</span><img src="${imgUrl}" alt="头像" class="avatar-img" onerror="this.style.display='none';var s=this.previousElementSibling;if(s)s.style.display='';" />`;
     }
     return `<span class="avatar-emoji">${emoji}</span>`;
@@ -650,6 +648,8 @@ async function handleLike(targetId) {
             } else {
                 showMatchDialog(mobileRecommendData[mobileRecommendIndex]);
             }
+        } else {
+            showToast('已喜欢 ♥', 'success');
         }
         if (!isPC()) nextMobileCard();
     } catch (err) { showToast(err.message, 'error'); }
@@ -724,8 +724,8 @@ async function viewUserDetail(userId) {
         overlay.innerHTML = `
         <div class="match-dialog" style="max-width:400px;width:90vw;padding:20px;text-align:center;position:relative;" onclick="event.stopPropagation()">
           <button style="position:absolute;top:8px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary);" onclick="this.closest('.match-overlay').remove()">✕</button>
-          <div style="font-size:80px;cursor:pointer;margin-bottom:8px;" onclick="closeModal();navigateTo('userpage',{userId:${u.id}})" title="点击查看完整主页">
-            ${renderAvatar(u.avatar, u.gender)}
+          <div style="width:160px;height:160px;margin:0 auto 8px;cursor:pointer;border-radius:50%;overflow:hidden;border:4px solid var(--gradient);box-shadow:0 4px 20px rgba(255,71,87,0.3);" onclick="closeModal();navigateTo('userpage',{userId:${u.id}})" title="点击查看完整主页">
+            <img src="${fixUploadUrl(u.avatar) || ''}" alt="头像" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=font-size:60px;display:flex;align-items:center;justify-content:center;height:100%;background:var(--bg);color:var(--text-secondary);>${getAvatarEmoji(u.gender)}</span>'" />
           </div>
           <h2 style="font-size:20px;margin:4px 0;cursor:pointer;" onclick="closeModal();navigateTo('userpage',{userId:${u.id}})" title="点击查看完整主页">${u.nickname}, ${u.age}岁</h2>
           <p style="color:var(--text-secondary);font-size:13px;">📍 ${u.city || '保密'} · ${u.occupation || '保密'}</p>
@@ -1194,11 +1194,13 @@ registerPage('profile', () => {
       <input type="file" id="avatarInput" accept="image/*" hidden onchange="previewAvatar(event)" />
       <div class="profile-name">${Store.user.nickname}</div>
       <div class="profile-id">ID: ${Store.user.id}</div>
+      <div id="vipStatusBadge" style="margin-top:10px;"></div>
     </div>
     <div id="photoAlbumSection"></div>
     <div id="profileContent"><div class="loading-spinner"></div></div>
     <div style="padding:20px 0;text-align:center;">
       <button class="btn btn-outline" onclick="navigateTo('analysis')" style="margin-right:8px;">📊 行为分析</button>
+      <button class="btn btn-gradient" onclick="window.open('pricing.html', '_blank')">💎 开通会员</button>
       <button class="btn btn-outline" style="color:var(--danger);border-color:var(--danger);" onclick="Store.logout();navigateTo('login')">退出登录</button>
     </div>
   `;
@@ -1213,8 +1215,27 @@ async function loadProfile() {
         const u = await api('/me');
         Store.setUser(u);
         renderProfile(u);
+        loadVipStatus();
     } catch (err) {
         document.getElementById('profileContent').innerHTML = `<div class="empty-state"><div class="empty-desc">${err.message}</div></div>`;
+    }
+}
+
+async function loadVipStatus() {
+    try {
+        const data = await api('/vip/info');
+        const badge = document.getElementById('vipStatusBadge');
+        if (!badge) return;
+        
+        if (data.vip_level === 'free') {
+            badge.innerHTML = '<span style="background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:12px;font-size:12px;">普通会员</span>';
+        } else if (data.vip_level === 'vip') {
+            badge.innerHTML = '<span style="background:linear-gradient(135deg, #ffd700, #ffaa00);color:#333;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:bold;">VIP会员</span>';
+        } else {
+            badge.innerHTML = '<span style="background:linear-gradient(135deg, #e040fb, #7c4dff);color:#fff;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:bold;">SVIP会员</span>';
+        }
+    } catch (err) {
+        console.error('加载会员状态失败:', err);
     }
 }
 
@@ -1228,6 +1249,10 @@ function renderProfile(u) {
       <div id="profileInfo"></div>
     </div>
     <div class="profile-section">
+      <div class="profile-section-title">💖 我喜欢的</div>
+      <div id="likedUsersList"><div class="loading-spinner"></div></div>
+    </div>
+    <div class="profile-section">
       <div class="profile-section-title">💝 择偶偏好</div>
       <div id="preferenceInfo"></div>
     </div>
@@ -1239,6 +1264,7 @@ function renderProfile(u) {
 
     renderPhotoAlbum(u);
     renderProfileInfo(u);
+    loadLikedUsers();
     renderPreferenceInfo(u);
     renderInterestInfo(u);
 }
@@ -1291,6 +1317,56 @@ function renderInterestInfo(u) {
     </div>
     <div class="form-group"><label class="form-label">添加兴趣</label><input class="form-input" id="newInterest" placeholder="输入兴趣后回车添加" onkeydown="if(event.key==='Enter'){addInterest();event.preventDefault()}" /></div>
   `;
+}
+
+let likedUsersData = [];
+let likedUsersTotal = 0;
+
+async function loadLikedUsers() {
+    const container = document.getElementById('likedUsersList');
+    if (!container) return;
+    try {
+        const res = await api(`/users/${Store.user.id}/likes?page=1&page_size=20`);
+        likedUsersData = res.users || [];
+        likedUsersTotal = res.total || 0;
+        renderLikedUsersList(container);
+    } catch (err) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-desc">加载失败：${err.message}</div></div>`;
+    }
+}
+
+function renderLikedUsersList(container) {
+    if (likedUsersTotal === 0) {
+        container.innerHTML = `<div class="empty-state" style="padding:20px 0;"><div style="font-size:48px;margin-bottom:12px;">💔</div><div style="font-size:16px;font-weight:600;margin-bottom:4px;">你还没有喜欢的用户</div><div style="font-size:14px;color:var(--text-secondary);">去推荐或发现页面，看看有没有心动的TA~</div></div>`;
+        return;
+    }
+
+    const allUsers = likedUsersData;
+    const maxHeight = Math.min(allUsers.length * 76 + (allUsers.length - 1) * 12, 240);
+
+    container.innerHTML = `
+      <div id="likedUsersContainer" style="display:block;max-height:${maxHeight}px;overflow-y:auto;">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          ${allUsers.map(u => {
+            const imgUrl = fixUploadUrl(u.avatar);
+            const emoji = getAvatarEmoji(u.gender);
+            const avatarHtml = imgUrl 
+              ? `<img src="${imgUrl}" alt="头像" style="width:40px;height:40px;object-fit:cover;border-radius:50%;" />`
+              : `<span style="font-size:22px;display:flex;align-items:center;justify-content:center;width:40px;height:40px;color:var(--text-secondary);">${emoji}</span>`;
+            return `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg-card);border-radius:var(--radius);cursor:pointer;border:1px solid var(--border);" onclick="viewUserDetail(${u.id})">
+              <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg);display:flex;align-items:center;justify-content:center;">${avatarHtml}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:15px;font-weight:600;color:var(--text);">${u.nickname}, ${u.age}岁</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">📍 ${u.city || '未设置'}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">${(u.interests || []).slice(0, 3).map(t => `<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:var(--gradient-warm);color:var(--text);">${t}</span>`).join('')}</div>
+              </div>
+            </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
 }
 
 function toggleProfileEdit() {

@@ -29,6 +29,11 @@ class User(Base):
     is_admin = Column(Boolean, default=False)  # 是否管理员（兼容旧字段）
     role = Column(String(20), default="user")  # user/moderator/admin/superadmin
     status = Column(String(20), default="active")  # active/banned
+    
+    vip_level = Column(String(20), default="free")  # free/vip/svip
+    vip_expire_at = Column(DateTime, nullable=True)  # 会员过期时间
+    vip_auto_renew = Column(Boolean, default=False)  # 是否自动续费
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
