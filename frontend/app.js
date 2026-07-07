@@ -956,6 +956,27 @@ function goDiscoverPage(page) {
     applyFilters(page);
 }
 
+function refreshChatList() {
+    const el = document.getElementById('chatListContainer');
+    if (!el) return;
+    api('/chat-list').then(data => {
+        if (!data.chat_list.length) {
+            el.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-title">暂无消息</div><div class="empty-desc">去发现页看看，说不定有人给你打招呼了~</div></div>';
+            return;
+        }
+        el.innerHTML = data.chat_list.map(c => `
+      <div class="chat-list-item">
+        <div class="chat-avatar-circle" style="cursor:pointer;" onclick="viewUserDetail(${c.user_id})">${renderAvatar(c.avatar, c.gender || 'other')}</div>
+        <div class="chat-content-wrap" onclick="openChat(${c.user_id}, '${c.nickname}', '${c.avatar || ''}', '${c.gender || 'other'}')">
+          <div class="chat-name-line">${c.nickname}</div>
+          <div class="chat-msg-line">${c.last_action === 'greet' ? '👋 ' : '💕 '}${c.last_message}</div>
+        </div>
+        <div class="chat-time-line" onclick="openChat(${c.user_id}, '${c.nickname}', '${c.avatar || ''}', '${c.gender || 'other'}')">${formatTime(c.time)}</div>
+      </div>
+    `).join('');
+    }).catch(() => { });
+}
+
 // ==================== 页面：消息列表 ====================
 registerPage('chatlist', () => {
     if (!Store.isLoggedIn()) { navigateTo('login'); return; }
@@ -1041,6 +1062,7 @@ function closeChat() {
     if (chatPollingTimer) { clearInterval(chatPollingTimer); chatPollingTimer = null; }
     Store.chatTarget = null;
     navigateTo('chatlist');
+    setTimeout(refreshChatList, 300);
 }
 
 async function loadChatMessages() {

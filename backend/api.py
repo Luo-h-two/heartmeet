@@ -2,6 +2,7 @@
 import os
 import uuid
 import random
+from datetime import datetime
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status, WebSocket, WebSocketDisconnect, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -488,7 +489,6 @@ async def get_chat_list(
     )
     from_me_all = from_me_result.all()
 
-    # 合并去重，保留最新交互
     contact_map = {}
     for user_id, action_type, created_at in to_me_all:
         if user_id not in contact_map or created_at > contact_map[user_id]["created_at"]:
@@ -497,17 +497,13 @@ async def get_chat_list(
         if user_id not in contact_map or created_at > contact_map[user_id]["created_at"]:
             contact_map[user_id] = {"action_type": action_type, "created_at": created_at}
 
-    # 按最新交互时间排序
-    sorted_contacts = sorted(contact_map.items(), key=lambda x: x[1]["created_at"], reverse=True)
-
     chat_list = []
-    for contact_id, info in sorted_contacts:
+    for contact_id, info in contact_map.items():
         user_result = await db.execute(select(User).where(User.id == contact_id))
         user = user_result.scalar_one_or_none()
         if not user:
             continue
 
-        # 获取最后一条聊天消息
         last_msg_result = await db.execute(
             select(ChatMessage).where(
                 or_(
@@ -518,6 +514,7 @@ async def get_chat_list(
         )
         last_msg = last_msg_result.scalar_one_or_none()
 
+        last_time = last_msg.created_at if last_msg else info["created_at"]
         chat_list.append({
             "user_id": user.id,
             "nickname": user.nickname,
@@ -525,8 +522,13 @@ async def get_chat_list(
             "gender": user.gender,
             "last_action": info["action_type"],
             "last_message": last_msg.content if last_msg else ("你好呀~" if info["action_type"] == "greet" else "对你心动了！"),
-            "time": (last_msg.created_at if last_msg else info["created_at"]).isoformat() if (last_msg or info["created_at"]) else "",
+            "time": last_time.isoformat() if last_time else "",
+            "sort_time": last_time,
         })
+
+    chat_list.sort(key=lambda x: x["sort_time"] if x["sort_time"] else datetime.min, reverse=True)
+    for item in chat_list:
+        del item["sort_time"]
 
     return {"chat_list": chat_list, "total": len(chat_list)}
 
