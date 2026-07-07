@@ -44,10 +44,10 @@ const isProduction = window.location.hostname !== 'localhost' && window.location
 const API_BASE = isProduction ? '/api' : 'http://localhost:8000/api';
 const UPLOAD_BASE = isProduction ? '' : 'http://localhost:8000';
 
-// 将 /uploads/ 路径转为完整URL（解决 file:// 直接打开导致图片加载失败的问题）
 function fixUploadUrl(path) {
     if (!path) return null;
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    if (path.startsWith('http://')) return path.replace('http://', 'https://');
+    if (path.startsWith('https://')) return path;
     return UPLOAD_BASE + (path.startsWith('/') ? path : '/' + path);
 }
 
