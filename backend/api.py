@@ -558,6 +558,18 @@ async def get_chat_messages(
             msg.is_read = True
     await db.commit()
 
+    # 获取双方用户信息
+    user_avatars = {}
+    user_genders = {}
+    if messages:
+        user_ids = set(m.from_user_id for m in messages) | set(m.to_user_id for m in messages)
+        for uid in user_ids:
+            result = await db.execute(select(User).where(User.id == uid))
+            u = result.scalar_one_or_none()
+            if u:
+                user_avatars[uid] = u.avatar
+                user_genders[uid] = u.gender
+
     return {
         "messages": [
             {
@@ -567,6 +579,8 @@ async def get_chat_messages(
                 "content": m.content,
                 "is_read": m.is_read,
                 "created_at": m.created_at.isoformat() if m.created_at else "",
+                "avatar": user_avatars.get(m.from_user_id, ""),
+                "gender": user_genders.get(m.from_user_id, "other"),
             }
             for m in reversed(messages)
         ],

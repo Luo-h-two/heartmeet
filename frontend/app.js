@@ -975,11 +975,11 @@ registerPage('chatlist', () => {
         el.innerHTML = data.chat_list.map(c => `
       <div class="chat-list-item">
         <div class="chat-avatar-circle" style="cursor:pointer;" onclick="viewUserDetail(${c.user_id})">${renderAvatar(c.avatar, c.gender || 'other')}</div>
-        <div class="chat-content-wrap" onclick="openChat(${c.user_id}, '${c.nickname}')">
+        <div class="chat-content-wrap" onclick="openChat(${c.user_id}, '${c.nickname}', '${c.avatar || ''}', '${c.gender || 'other'}')">
           <div class="chat-name-line">${c.nickname}</div>
           <div class="chat-msg-line">${c.last_action === 'greet' ? '👋 ' : '💕 '}${c.last_message}</div>
         </div>
-        <div class="chat-time-line" onclick="openChat(${c.user_id}, '${c.nickname}')">${formatTime(c.time)}</div>
+        <div class="chat-time-line" onclick="openChat(${c.user_id}, '${c.nickname}', '${c.avatar || ''}', '${c.gender || 'other'}')">${formatTime(c.time)}</div>
       </div>
     `).join('');
 
@@ -1002,8 +1002,8 @@ function openChatDirect(targetUserId, targetNickname) {
     renderChatPage();
 }
 
-function openChat(targetUserId, targetNickname) {
-    Store.chatTarget = { id: targetUserId, nickname: targetNickname };
+function openChat(targetUserId, targetNickname, avatar = '', gender = 'other') {
+    Store.chatTarget = { id: targetUserId, nickname: targetNickname, avatar, gender };
     renderChatPage();
 }
 
@@ -1015,7 +1015,7 @@ function renderChatPage() {
     <div class="chat-dialog-wrap">
       <div class="chat-dialog-header">
         <button class="back-btn" onclick="closeChat()">←</button>
-        <div class="chat-avatar-circle" style="width:40px;height:40px;font-size:20px;cursor:pointer;" onclick="viewUserDetail(${Store.chatTarget.id})">👤</div>
+        <div class="chat-avatar-circle" style="width:40px;height:40px;font-size:20px;cursor:pointer;" onclick="viewUserDetail(${Store.chatTarget.id})">${renderAvatar(Store.chatTarget.avatar || '', Store.chatTarget.gender || 'other')}</div>
         <div style="flex:1;cursor:pointer;" onclick="viewUserDetail(${Store.chatTarget.id})">
           <div style="font-weight:600;font-size:16px;">${targetNickname}</div>
           <div style="font-size:12px;color:var(--success);">在线</div>
@@ -1033,7 +1033,6 @@ function renderChatPage() {
   `;
 
     loadChatMessages();
-    // 轮询新消息
     if (chatPollingTimer) clearInterval(chatPollingTimer);
     chatPollingTimer = setInterval(loadChatMessagesSilent, 2000);
 }
@@ -1072,9 +1071,14 @@ function renderChatMessages(messages) {
     el.innerHTML = messages.map(m => {
         const isMe = m.from_user_id === Store.user.id;
         return `
-      <div class="chat-msg-bubble ${isMe ? 'me' : 'other'}">
-        ${m.content}
-        <div class="chat-msg-time" style="${isMe ? 'text-align:right;' : ''}">${formatTime(m.created_at)}</div>
+      <div class="chat-msg-row ${isMe ? 'me' : 'other'}">
+        <div class="chat-msg-avatar">${isMe ? renderAvatar(Store.user.avatar || '', Store.user.gender || 'other') : renderAvatar(m.avatar || '', m.gender || 'other')}</div>
+        <div class="chat-msg-bubble-wrap">
+          <div class="chat-msg-bubble ${isMe ? 'me' : 'other'}">
+            ${m.content}
+          </div>
+          <div class="chat-msg-time" style="${isMe ? 'text-align:right;' : ''}">${formatTime(m.created_at)}</div>
+        </div>
       </div>
     `;
     }).join('');
