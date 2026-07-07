@@ -2,7 +2,7 @@
 import os
 import uuid
 import random
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status, WebSocket, WebSocketDisconnect, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +22,13 @@ from vip_service import get_vip_info, check_like_limit, check_ai_chat_limit, buy
 from config import UPLOAD_DIR, MAX_UPLOAD_SIZE
 
 router = APIRouter(prefix="/api", tags=["API"])
+
+def to_beijing_time(dt):
+    if not dt:
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone(timedelta(hours=8))).isoformat()
 
 
 # ==================== 用户系统 ====================
@@ -522,7 +529,7 @@ async def get_chat_list(
             "gender": user.gender,
             "last_action": info["action_type"],
             "last_message": last_msg.content if last_msg else ("你好呀~" if info["action_type"] == "greet" else "对你心动了！"),
-            "time": last_time.isoformat() if last_time else "",
+            "time": to_beijing_time(last_time),
             "sort_time": last_time,
         })
 
@@ -580,7 +587,7 @@ async def get_chat_messages(
                 "to_user_id": m.to_user_id,
                 "content": m.content,
                 "is_read": m.is_read,
-                "created_at": m.created_at.isoformat() if m.created_at else "",
+                "created_at": to_beijing_time(m.created_at),
                 "avatar": user_avatars.get(m.from_user_id, ""),
                 "gender": user_genders.get(m.from_user_id, "other"),
             }
@@ -613,7 +620,7 @@ async def send_chat_message(
         "to_user_id": msg.to_user_id,
         "content": msg.content,
         "is_read": msg.is_read,
-        "created_at": msg.created_at.isoformat() if msg.created_at else "",
+        "created_at": to_beijing_time(msg.created_at),
     }
 
 

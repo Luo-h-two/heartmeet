@@ -223,7 +223,11 @@ function formatTime(isoStr) {
     if (diff < 60000) return '刚刚';
     if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
     if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
-    return `${d.getMonth() + 1}/${d.getDate()}`;
+    const days = Math.floor(diff / 86400000);
+    if (days === 1) return '昨天';
+    if (days === 2) return '前天';
+    if (days < 7) return days + '天前';
+    return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 // ==================== 页面：登录 ====================
