@@ -1,11 +1,11 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "command": "pip install -r backend/requirements.txt && chmod +x start.sh",
-    "watchPatterns": ["**/*.py", "**/*.html", "**/*.js", "**/*.css", "**/*.json", "**/*.sh"]
+    "command": "pip install -r backend/requirements.txt",
+    "watchPatterns": ["**/*.py", "**/*.html", "**/*.js", "**/*.css", "**/*.json"]
   },
   "start": {
-    "command": "./start.sh",
+    "command": "uvicorn backend.main:app --host 0.0.0.0 --port $PORT",
     "port": 8000
   }
 }
