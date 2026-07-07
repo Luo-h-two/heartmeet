@@ -158,7 +158,7 @@ function renderAvatar(avatar, gender) {
     const imgUrl = fixUploadUrl(avatar);
     const emoji = getAvatarEmoji(gender);
     if (imgUrl) {
-        return `<span class="avatar-emoji" style="display:none;">${emoji}</span><img src="${imgUrl}" alt="头像" class="avatar-img" onerror="this.style.display='none';var s=this.previousElementSibling;if(s)s.style.display='';" />`;
+        return `<img src="${imgUrl}" alt="头像" class="avatar-img" onerror="this.style.display='none';this.parentElement.innerHTML='<span class=&quot;avatar-emoji&quot;>${emoji}</span>';" />`;
     }
     return `<span class="avatar-emoji">${emoji}</span>`;
 }
