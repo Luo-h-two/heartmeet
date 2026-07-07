@@ -152,7 +152,15 @@ async def upload_photo(
         raise HTTPException(status_code=400, detail=f"图片不能超过 {MAX_UPLOAD_SIZE // (1024*1024)}MB")
 
     # 限制相册最多9张
-    photos = current_user.photos or []
+    photos_data = current_user.photos or '[]'
+    if isinstance(photos_data, str):
+        try:
+            photos = json.loads(photos_data)
+        except:
+            photos = []
+    else:
+        photos = list(photos_data)
+    
     if len(photos) >= 9:
         raise HTTPException(status_code=400, detail="相册最多9张照片")
 
@@ -181,7 +189,15 @@ async def delete_photo(
     db: AsyncSession = Depends(get_db),
 ):
     """删除相册照片"""
-    photos = current_user.photos or []
+    photos_data = current_user.photos or '[]'
+    if isinstance(photos_data, str):
+        try:
+            photos = json.loads(photos_data)
+        except:
+            photos = []
+    else:
+        photos = list(photos_data)
+    
     target_url = f"/uploads/{current_user.id}/{filename}"
     if target_url not in photos:
         raise HTTPException(status_code=404, detail="照片不存在")
