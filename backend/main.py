@@ -1,11 +1,15 @@
 """心遇 - 相亲交友平台后端入口"""
 import os
+import sys
 import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from database import init_db, async_session
 from seed_data import seed_database
 from api import router
